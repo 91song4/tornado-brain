@@ -1,0 +1,22 @@
+-- 코드를 입력하세요
+WITH RECURSIVE Twenty_four AS(
+    SELECT 0 AS HOUR
+    UNION ALL
+    SELECT HOUR + 1
+    FROM Twenty_four
+    WHERE HOUR < 23
+)
+
+SELECT
+    TF.HOUR,
+    IFNULL(AO.COUNT,'0')
+FROM Twenty_four TF
+LEFT OUTER JOIN (
+    SELECT
+        DATE_FORMAT(DATETIME, '%H') AS HOUR,
+        COUNT(*) AS COUNT
+    FROM ANIMAL_OUTS
+    GROUP BY HOUR
+    ORDER BY HOUR) AS AO
+    ON TF.HOUR = AO.HOUR;
+    
