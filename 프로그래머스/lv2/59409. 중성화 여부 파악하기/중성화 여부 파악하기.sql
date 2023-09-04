@@ -2,10 +2,6 @@
 SELECT
     ANIMAL_ID,
     NAME,
-    CASE SEX_UPON_INTAKE LIKE 'In%'
-        WHEN 0
-        THEN 'O'
-        ELSE 'X'
-    END
+    IF(SEX_UPON_INTAKE like 'In%', 'X', 'O') AS 중성화
 FROM ANIMAL_INS
 ORDER BY 1;
