@@ -1,0 +1,121 @@
+-- 코드를 입력하세요
+# CAR_RENTAL_COMPANY_CAR 에서 트럭들의 정보 목록
+# SELECT
+#     CAR_ID,
+#     DAILY_FEE
+# FROM CAR_RENTAL_COMPANY_CAR
+# WHERE CAR_TYPE = '트럭';
+
+
+# 트럭들의 렌탈 이용 기록
+# SELECT *
+# FROM CAR_RENTAL_COMPANY_RENTAL_HISTORY
+# NATURAL JOIN (SELECT
+#     CAR_ID,
+#     DAILY_FEE
+# FROM CAR_RENTAL_COMPANY_CAR
+# WHERE CAR_TYPE = '트럭') TRUCK_LIST
+
+
+# 트럭 렌탈 이용 요금 계산 - 할인 적용 X
+# SELECT 
+#     HISTORY_ID,
+#     ((DATEDIFF(END_DATE, START_DATE) + 1) * TRUCK_LIST.DAILY_FEE )AS FEE
+# FROM CAR_RENTAL_COMPANY_RENTAL_HISTORY
+# NATURAL JOIN (SELECT
+#     CAR_ID,
+#     DAILY_FEE
+# FROM CAR_RENTAL_COMPANY_CAR
+# WHERE CAR_TYPE = '트럭') TRUCK_LIST
+
+
+# 트럭 렌탈 이용 요금 계산 - 할인 적용 O
+# SELECT 
+#     CH.HISTORY_ID,
+#     TRUNCATE(((DATEDIFF(CH.END_DATE, CH.START_DATE) + 1) * DAILY_FEE) * (1 - (DISCOUNT_RATE / 100)),0) AS FEE
+# FROM CAR_RENTAL_COMPANY_RENTAL_HISTORY CH
+# NATURAL JOIN (SELECT
+#                 CAR_TYPE,
+#                 CAR_ID,
+#                 DAILY_FEE
+#             FROM CAR_RENTAL_COMPANY_CAR
+#             WHERE CAR_TYPE = '트럭') CI
+# LEFT OUTER JOIN (SELECT
+#                 DURATION_TYPE,
+#                 DISCOUNT_RATE,
+#                 CAR_TYPE
+#             FROM CAR_RENTAL_COMPANY_DISCOUNT_PLAN) CD
+#     ON CI.CAR_TYPE = CD.CAR_TYPE
+# WHERE DATEDIFF(CH.END_DATE, CH.START_DATE) +1 >= DURATION_TYPE
+# GROUP BY HISTORY_ID
+# ORDER BY 2 DESC, 1 DESC;
+
+# SELECT 
+#     distinct H.HISTORY_ID,
+#     C.CAR_TYPE,
+#     H.START_DATE,
+#     H.END_DATE,
+#     DATEDIFF(H.END_DATE, H.START_DATE)+1 AS DATEDIFF,
+#     D.DURATION_TYPE,
+#     D.DISCOUNT_RATE,
+#     CASE
+#         WHEN DATEDIFF(H.END_DATE, H.START_DATE) + 1 >= D.DURATION_TYPE
+#             THEN CONCAT(DATEDIFF(H.END_DATE, H.START_DATE) + 1,D.DURATION_TYPE)
+#     END
+#     # TRUNCATE(((DATEDIFF(CH.END_DATE, CH.START_DATE) + 1) * DAILY_FEE) * (1 - (DISCOUNT_RATE / 100)),0) AS FEE
+# FROM CAR_RENTAL_COMPANY_CAR C
+# INNER JOIN CAR_RENTAL_COMPANY_RENTAL_HISTORY H
+#     ON C.CAR_ID = H.CAR_ID
+# LEFT OUTER JOIN CAR_RENTAL_COMPANY_DISCOUNT_PLAN D
+#     ON C.CAR_TYPE = D.CAR_TYPE
+# WHERE C.CAR_TYPE = '트럭'
+# GROUP BY H.HISTORY_ID
+# AND DATEDIFF(H.END_DATE, H.START_DATE) + 1 >= D.DURATION_TYPE
+# GROUP BY HISTORY_ID, FEE
+
+
+# SELECT *
+# FROM CAR_RENTAL_COMPANY_DISCOUNT_PLAN D
+# RIGHT OUTER JOIN (SELECT 
+#                 CAR_TYPE,
+#                 HISTORY_ID,
+#                 START_DATE,
+#                 END_DATE,
+#                 DATEDIFF(END_DATE, START_DATE) + 1 AS RENTAL_DATE
+#             FROM CAR_RENTAL_COMPANY_CAR C
+#             NATURAL JOIN CAR_RENTAL_COMPANY_RENTAL_HISTORY H
+#             WHERE CAR_TYPE = '트럭') CH
+#     ON D.CAR_TYPE = CH.CAR_TYPE
+#     AND D.DURATION_TYPE = (CASE
+#                             WHEN CH.RENTAL_DATE >= 90
+#                                 THEN '90일 이상'
+#                             WHEN CH.RENTAL_DATE >= 30
+#                                 THEN '30일 이상'
+#                             WHEN CH.RENTAL_DATE >= 7
+#                                 THEN '7일 이상'
+#                             ELSE ''
+#                          END)
+
+SELECT 
+    HISTORY_ID,
+    TRUNCATE(RENTAL_DATE * DAILY_FEE * (1 - (IFNULL(DISCOUNT_RATE, 0) / 100)), 0) AS FEE
+FROM (SELECT 
+        CAR_TYPE,
+        DAILY_FEE,
+        HISTORY_ID,
+        DATEDIFF(END_DATE, START_DATE) + 1 AS RENTAL_DATE
+    FROM CAR_RENTAL_COMPANY_CAR C
+    NATURAL JOIN CAR_RENTAL_COMPANY_RENTAL_HISTORY H
+WHERE CAR_TYPE = '트럭') CH
+LEFT OUTER JOIN CAR_RENTAL_COMPANY_DISCOUNT_PLAN D 
+    ON D.CAR_TYPE = CH.CAR_TYPE
+    AND D.DURATION_TYPE = (CASE
+                            WHEN CH.RENTAL_DATE >= 90
+                                THEN '90일 이상'
+                            WHEN CH.RENTAL_DATE >= 30
+                                THEN '30일 이상'
+                            WHEN CH.RENTAL_DATE >= 7
+                                THEN '7일 이상'
+                            ELSE ''
+                         END)
+ORDER BY 2 DESC, 1 DESC
